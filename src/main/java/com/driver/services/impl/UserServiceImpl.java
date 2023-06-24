@@ -1,6 +1,5 @@
 package com.driver.services.impl;
 
-import com.driver.Exceptions.CountryNotFoundException;
 import com.driver.model.Country;
 import com.driver.model.CountryName;
 import com.driver.model.ServiceProvider;
@@ -11,8 +10,6 @@ import com.driver.repository.UserRepository;
 import com.driver.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -26,63 +23,60 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User register(String username, String password, String countryName) throws Exception{
-        //create a user of given country. The originalIp of the user should be "countryCode.userId" and return the user.
-        // Note that right now user is not connected and thus connected would be false and maskedIp would be null
-        //Note that the userId is created automatically by the repository layer
+        User user = new User();
+        if(countryName.equalsIgnoreCase("IND") || countryName.equalsIgnoreCase("USA")|| countryName.equalsIgnoreCase("JPN")|| countryName.equalsIgnoreCase("AUS")|| countryName.equalsIgnoreCase("CHI")){
+            user.setUsername(username);
+            user.setPassword(password);
 
-        countryName=countryName.toUpperCase();
-        boolean countryFound=false;
-        CountryName countryName1=CountryName.IND;
-        for(CountryName name: CountryName.values()){
-            if(name.toString().equals(countryName)){
-                countryFound=true;
-                countryName1=name;
-                break;
+            Country country = new Country(); //linking
+            if(countryName.equalsIgnoreCase("IND")){
+                country.setCountryName(CountryName.IND);
+                country.setCode(CountryName.IND.toCode());
             }
+            if(countryName.equalsIgnoreCase("USA")){
+                country.setCountryName(CountryName.USA);
+                country.setCode(CountryName.USA.toCode());
+            }
+            if(countryName.equalsIgnoreCase("JPN")){
+                country.setCountryName(CountryName.JPN);
+                country.setCode(CountryName.JPN.toCode());
+            }
+            if(countryName.equalsIgnoreCase("CHI")){
+                country.setCountryName(CountryName.CHI);
+                country.setCode(CountryName.CHI.toCode());
+            }
+            if(countryName.equalsIgnoreCase("AUA")){
+                country.setCountryName(CountryName.AUS);
+                country.setCode(CountryName.AUS.toCode());
+            }
+
+            country.setUser(user); //reverse linking
+            user.setOriginalCountry(country);
+            user.setConnected(false); //vpn main goal
+
+            String code = country.getCode()+"."+userRepository3.save(user).getId();
+            user.setOriginalIp(code); //new
+
+            userRepository3.save(user);
+
+
         }
-        if(!countryFound){
-            throw new CountryNotFoundException("Country not found");
+        else{  //means user is null
+            throw new Exception("Country not found");
         }
-
-        Country country=null;
-//        List<Country> countries=countryRepository3.findAll();
-//        for(Country country1: countries){
-//            if(country1.getCountryName().equals(countryName1)){
-//                country=country1;
-//                break;
-//            }
-//        }
-        if(country==null){
-            country=new Country();
-            country.setCountryName(countryName1);
-            country.setCode(countryName1.toCode());
-        }
-        User user= new User();
-        user.setUsername(username);
-        user.setPassword(password);
-        user.setConnected(false);
-        user.setOriginalCountry(country);
-        country.setUser(user);
-        User savedUser=userRepository3.save(user);
-        savedUser.setOriginalIp(country.getCode()+"."+savedUser.getId());
-
-        userRepository3.save(savedUser);
-
-
-        return savedUser;
+        return user;
     }
 
     @Override
     public User subscribe(Integer userId, Integer serviceProviderId) {
-        //subscribe to the serviceProvider by adding it to the list of providers and return updated User
-        ServiceProvider serviceProvider=serviceProviderRepository3.findById(serviceProviderId).get();
-        User user= userRepository3.findById(userId).get();
+        User user = userRepository3.findById(userId).get();
+        ServiceProvider serviceProvider = serviceProviderRepository3.findById(serviceProviderId).get();
 
-        serviceProvider.getUsers().add(user);
         user.getServiceProviderList().add(serviceProvider);
+        serviceProvider.getUsers().add(user);
 
         serviceProviderRepository3.save(serviceProvider);
-
         return user;
+
     }
 }
